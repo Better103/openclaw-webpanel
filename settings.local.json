@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.openclaw.ai)",
+      "mcp__fetch__fetch",
+      "Bash(npm create:*)",
+      "Bash(npx create-vue@latest . --typescript --router --pinia --eslint --prettier --force)",
+      "Bash(npx create-vue@latest . --typescript --router --pinia --eslint --prettier --force --yes)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
