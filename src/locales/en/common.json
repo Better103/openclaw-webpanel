@@ -1,0 +1,41 @@
+{
+  "app": {
+    "title": "OpenClaw Control Dashboard",
+    "description": "AI Agent Orchestration Dashboard"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "filter": "Filter",
+    "refresh": "Refresh",
+    "loading": "Loading...",
+    "noData": "No data available",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "reset": "Reset",
+    "close": "Close"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "agents": "Agents",
+    "routing": "Routing",
+    "analytics": "Analytics",
+    "settings": "Settings",
+    "help": "Help",
+    "logout": "Logout"
+  },
+  "language": {
+    "en": "English",
+    "zh-CN": "Chinese"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark"
+  }
+}
