@@ -20,57 +20,26 @@
         <div class="graph-header">
           <h3>Agent Routing Graph</h3>
           <div class="graph-controls">
-            <el-button size="small" @click="resetView">
+            <el-button size="small" @click="handleGraphReset">
               <el-icon><Refresh /></el-icon>
-              Reset View
+              Reset Graph
             </el-button>
-            <el-button size="small" @click="toggleLabels">
-              <el-icon><View /></el-icon>
-              {{ showLabels ? 'Hide Labels' : 'Show Labels' }}
+            <el-button size="small" @click="simulateRouting">
+              <el-icon><VideoPlay /></el-icon>
+              Simulate Flow
             </el-button>
-            <el-switch
-              v-model="autoLayout"
-              active-text="Auto Layout"
-              size="small"
-            />
+            <el-button type="primary" size="small" @click="showCreateBinding">
+              <el-icon><Plus /></el-icon>
+              Add Binding
+            </el-button>
           </div>
         </div>
       </template>
-      <div class="graph-container">
-        <div class="graph-placeholder">
-          <div class="placeholder-text">Interactive Routing Graph</div>
-          <div class="placeholder-graph">
-            <!-- 模拟图节点 -->
-            <div
-              v-for="(node, index) in graphNodes"
-              :key="`node-${index}`"
-              class="graph-node"
-              :style="{
-                left: `${node.x}%`,
-                top: `${node.y}%`,
-                backgroundColor: node.color,
-                borderColor: node.borderColor
-              }"
-              :class="{ 'node-active': node.active }"
-            >
-              <div class="node-label">{{ node.label }}</div>
-              <div class="node-status">{{ node.status }}</div>
-            </div>
-            <!-- 模拟连接线 -->
-            <div
-              v-for="(edge, index) in graphEdges"
-              :key="`edge-${index}`"
-              class="graph-edge"
-              :style="{
-                left: `${edge.fromX}%`,
-                top: `${edge.fromY}%`,
-                width: `${edge.width}%`,
-                transform: `rotate(${edge.angle}deg)`
-              }"
-            ></div>
-          </div>
-        </div>
-      </div>
+      <AgentGraph
+        ref="agentGraphRef"
+        @node-click="handleNodeClick"
+        @edge-click="handleEdgeClick"
+      />
     </el-card>
 
     <!-- 绑定规则 -->
@@ -173,6 +142,13 @@
         </div>
       </div>
     </el-card>
+
+    <!-- 绑定编辑器对话框 -->
+    <BindingEditor
+      v-model="showBindingEditor"
+      :binding-data="editingBinding"
+      @submit="handleBindingSubmit"
+    />
   </div>
 </template>
 
@@ -189,9 +165,46 @@ import {
   WarningFilled,
   CircleCloseFilled
 } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import AgentGraph from '@/components/visualization/AgentGraph.vue'
+import BindingEditor from '@/components/routing/BindingEditor.vue'
+import { useRoutingStore } from '@/stores/routing.store'
+import type { BindingRule } from '@/types/routing'
 
 const showLabels = ref(true)
 const autoLayout = ref(true)
+const agentGraphRef = ref<InstanceType<typeof AgentGraph>>()
+
+// 事件处理方法
+const handleNodeClick = (nodeId: string, nodeType: string) => {
+  console.log('Node clicked:', nodeId, nodeType)
+  // 可以根据节点类型显示不同信息
+  if (nodeType === 'agent') {
+    const agentId = nodeId.replace('agent-', '')
+    // 可以在这里显示代理详情或执行其他操作
+    ElMessage.info(`Agent clicked: ${agentId}`)
+  } else if (nodeType === 'channel') {
+    const channel = nodeId.replace('channel-', '')
+    ElMessage.info(`Channel clicked: ${channel}`)
+  }
+}
+
+const handleEdgeClick = (edgeId: string, source: string, target: string) => {
+  console.log('Edge clicked:', edgeId, source, target)
+  ElMessage.info(`Binding clicked: ${edgeId}`)
+}
+
+const handleGraphReset = () => {
+  if (agentGraphRef.value) {
+    agentGraphRef.value.resetGraph()
+    ElMessage.success('Graph reset successfully')
+  }
+}
+
+// 绑定编辑器相关
+const showBindingEditor = ref(false)
+const editingBinding = ref<BindingRule | null>(null)
+const routingStore = useRoutingStore()
 
 // 模拟图数据
 const graphNodes = ref([
@@ -229,7 +242,8 @@ const testForm = reactive({
 const testResult = ref<any>(null)
 
 const showCreateBinding = () => {
-  console.log('Show create binding dialog')
+  editingBinding.value = null
+  showBindingEditor.value = true
 }
 
 const simulateRouting = () => {
@@ -248,16 +262,53 @@ const showBindingHelp = () => {
   window.open('https://docs.openclaw.ai/zh-CN/concepts/multi-agent', '_blank')
 }
 
-const toggleBinding = (binding: any) => {
-  console.log('Toggle binding:', binding)
+const toggleBinding = async (binding: any) => {
+  try {
+    await routingStore.toggleBinding(binding.id, !binding.enabled)
+    ElMessage.success(`Binding ${binding.enabled ? 'disabled' : 'enabled'} successfully`)
+  } catch (error) {
+    console.error('Error toggling binding:', error)
+    ElMessage.error('Failed to toggle binding')
+  }
 }
 
 const editBinding = (binding: any) => {
-  console.log('Edit binding:', binding)
+  editingBinding.value = binding
+  showBindingEditor.value = true
 }
 
 const deleteBinding = (binding: any) => {
-  console.log('Delete binding:', binding)
+  ElMessageBox.confirm(
+    `Are you sure you want to delete binding rule ${binding.priority}?`,
+    'Delete Binding Rule',
+    {
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel',
+      type: 'warning'
+    }
+  ).then(() => {
+    // 从路由存储中删除绑定
+    routingStore.deleteBinding(binding.id)
+    ElMessage.success('Binding rule deleted successfully')
+  }).catch(() => {
+    // 用户取消
+  })
+}
+
+// 处理绑定提交
+const handleBindingSubmit = async (bindingData: BindingRule) => {
+  try {
+    if (editingBinding.value) {
+      // 更新现有绑定
+      await routingStore.updateBinding(bindingData.id, bindingData)
+    } else {
+      // 添加新绑定
+      await routingStore.createBinding(bindingData)
+    }
+  } catch (error) {
+    console.error('Error saving binding:', error)
+    ElMessage.error('Failed to save binding')
+  }
 }
 
 const testRouting = () => {
